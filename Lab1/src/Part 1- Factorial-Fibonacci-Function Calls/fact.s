@@ -12,7 +12,7 @@ _start:
 	B end 	// return value is stored in R0
 	
 fact:
-	CMP R1, #2 // R0 - 2 => CPSR
+	CMP R1, #2 // R1 - 2 => CPSR
 	BLT return1
 	B else
 
