@@ -34,6 +34,7 @@ loop2:
 	LDR R5, [R1, R7, LSL#2] 
 	
 	CMP R4, R5
+	// swap if necessary 
 	STRGT   R5,[R1,R3,LSL #2]   
     STRGT   R4,[R1,R7,LSL #2]  
 	ADD R3, R3, #1
@@ -41,14 +42,7 @@ loop2:
 	
 iterate:
 	B loop1
-
 	
 end:
 	// restore registers (callee-save convention)
-	LDR R7, [R1], #4
-	LDR R7, [R1], #4
-	LDR R7, [R1], #4
-	LDR R7, [R1], #4
-	LDR R7, [R1], #4
-
 	POP {R0-R7, PC}
