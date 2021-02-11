@@ -30,14 +30,14 @@ KHW: .word 2 // Kernel height stride
 
 _start:
 	// Load program values 
-	LDR R0, =IH
-	LDR R1, =IW
+	LDR R0, =IW
+	LDR R1, =IH
 	LDR R2, =KW
 	LDR R3, =KH
 	LDR R4, =KSW
 	LDR R5, =KHW
-	LDR R0, [R0] // R0 = ih
-	LDR R1, [R1] // R1 = iw
+	LDR R0, [R0] // R0 = IW
+	LDR R1, [R1] // R1 = IH
 	LDR R2, [R2] // R2 = KW
 	LDR R3, [R3] // R3 = KH
 	LDR R4, [R4] // R4 = KSW
@@ -53,12 +53,12 @@ _start:
 	MOV R6, #0 // Initialize y (R6 = y)
 
 LOOP1:
-	CMP R0, R6
+	CMP R1, R6
 	BLE END
-	MOV R7, #0 // initialize x (R7 = x)
+	MOV R7, #0 // Initialize x (R7 = x)
 
 LOOP2: 
-	CMP R1, R7
+	CMP R0, R7
 	BLE ENDLOOP1 
 	MOV R8, #0 // R8 = sum 
 	MOV R9, #0 // R9 = i 
@@ -66,7 +66,7 @@ LOOP2:
 LOOP3: 
 	CMP R2, R9
 	BLE ENDLOOP2
-	MOV R10, #1 // R10 = j
+	MOV R10, #0 // R10 = j
 
 LOOP4: 
 	CMP R3, R10
