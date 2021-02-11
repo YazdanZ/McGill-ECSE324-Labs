@@ -1,33 +1,35 @@
+.data
+
+// Find the factorial of 10 (= x375f00) 
+IN: .word 10
+
+.text
 .global _start
 
-// data section starts 
-// section .data
-
-// code section starts 
-// section .text
 _start:
-	// find the factorial of 5 (120 = x78) 
-	MOV R1, #5
-	BL fact
-	B end 	// return value is stored in R0
+	LDR R1, =IN
+	LDR R1, [R1]
+	BL FACT
+	B END 	
+	// Return value is stored in R0
 	
-fact:
+FACT:
 	CMP R1, #2 // R1 - 2 => CPSR
-	BLT return1
-	B else
+	BLT RETURN1
+	B ELSE
 
-return1:
+RETURN1:
 	MOV R0, #1
 	BX LR
 
-else:
-	PUSH {R1} // store previous n
-	SUB R1, R1, #1 // n = n - 1
-	PUSH {LR}
-	BL fact
-	POP {LR}
-	POP {R1}
+ELSE:
+	PUSH {R1, LR} // store current N and LR
+	SUB R1, R1, #1 // --N
+	BL FACT
+	POP {LR, R1}
 	MUL R0, R0, R1
 	BX LR
 
-.end
+END:
+	B END
+	
