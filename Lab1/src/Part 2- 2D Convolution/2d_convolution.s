@@ -46,7 +46,9 @@ _start:
 	LDR R8, =FX
 	LDR R7, =KX
 	LDR R6, =OUT
-	PUSH {R6-R8}
+	PUSH {R6}
+	PUSH {R7}
+	PUSH {R8}
 	
 	MOV R6, #0 // Initialize y (R6 = y)
 
@@ -69,7 +71,7 @@ LOOP3:
 LOOP4: 
 	CMP R3, R10
 	BLE ENDLOOP3
-	
+		
 	ADD R11, R7, R10 // temp1 = x + j 
 	SUB R11, R11, R4 // temp1 -= ksw
 	
@@ -84,30 +86,41 @@ LOOP4:
 	BLT ENDLOOP4
 	CMP R12, #9
 	BGT ENDLOOP4
-		
+	
+	// push the contents of registers 
+	// we need as temp in this section 
+	PUSH {R0}
+	PUSH {R1}
+	PUSH {R2}
+
+	
 	// Body of the if statement 
 	// get fx[temp1][temp2]
-	PUSH {R0, R12}
-	PUSH {R12}
-	MUL R0, R0, #4 	// Row size 
+	MOV R1, #4
+	MUL R0, R0, R1 	// Row size 
 	MUL R11, R11, R0 // Row offset
-	MUL R12, R12, #4 // Column offset 
+	MUL R12, R12, R1 // Column offset 
 	ADD R11, R11, R12 // Total offset 
-	POP {R12, R0}
 	
-	POP {R12} // pop FX into R12	
+	LDR R12, [SP, #12] // get FX into R12	
 	LDR R11, [R12, R11] // R11 = fx[temp1][temp2]
 	
-	POP {R12} // pop KX into R12
+	// get kx[j][i]
+	MUL R2, R2, R1 	// Row size 
+	MUL R2, R2, R10 // Row offset
+	MUL R1, R1, R9  // Column offset
+	ADD R1, R1, R2 // Total offeset
 	
-	PUSH {R10}
-	PUSH {R2}
-	MUL R2, R2, #4 	// Row size 
-	MUL R11, R11, R0 // Row offset
-
+	LDR R0, [SP, #16] // get kx into R0
+	LDR R0, [R0, R1] // R0 = kx[j][i]
+	
+	MUL R0, R0, R11
+	ADD R8, R8, R0 // Calculate sum 
+	
+	
 	POP {R2}
-	POP {R10}
-	
+	POP {R1}
+	POP {R0}
 	
 ENDLOOP4:
 	ADD R10, R10, #1 // increment j 
@@ -118,6 +131,21 @@ ENDLOOP3:
 	B LOOP3
 	
 ENDLOOP2:
+	LDR R11, [SP, #8] // load the output array
+	PUSH {R0}
+	PUSH {R1}
+	
+	MOV R0, #4 
+	MUL R1, R1, R0 // Row size 
+	MUL R1, R1, R7 // Row offset
+	MUL R0, R0, R6 // Column offset 
+	ADD R0, R0, R1 // Total offset
+	
+	STR R8, [R11, R0] // sum = gx[x][y]
+	
+	POP {R1}
+	POP {R0}
+	
 	ADD R7, R7, #1 // increment x
 	B LOOP2
 
@@ -126,4 +154,5 @@ ENDLOOP1:
 	B LOOP1
 
 END:
+	LDR R0, [SP, #8]
 	B END
