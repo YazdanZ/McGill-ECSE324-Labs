@@ -1,0 +1,147 @@
+\documentclass[10pt]{article}
+\usepackage{parcolumns}
+\usepackage[margin=1in]{geometry}
+\usepackage{blindtext}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{parcolumns}
+\usepackage{wrapfig}
+\graphicspath{{./images/}}
+\lstset{basicstyle=\tiny, numbers=left}
+
+\begin{document}
+
+\title{\textbf{ECSE 324 Computer Organization}\\
+    \bigskip
+    Laboratory 1\\
+    Basic Assembly Language Programming
+}
+
+\author{Seyed Yazdan Zinati}
+\maketitle
+\thispagestyle{empty}
+\setcounter{page}{0}
+\clearpage
+
+\begin{abstract}
+    \blindtext
+\end{abstract}
+
+\section{Factorial, Fibonacci, and Function Calls}
+Recursion is a technique of solving a problem where the solution depends on solutions to smaller instances of the same problem. While recursive problems can commonly be solved by iteration, recursion oftentimes offers a more elegant and concise solution. In this part, we implement two recursive procedures, one procedure to calculate the factorial of a number and another one that finds Fibonacci numbers.\\
+To implement recursion, we create subroutines that can be called from any position in our program. However, due to the procedure being recursive, the subroutines themselves are called from within the subroutine. Nested subroutines create challenges which we solve through the use of concepts namely, branching and linking and the use of the stack. Moreover, we follow ARM subroutine calling conventions, particularly the Callee-save Convention, when passing parameters and returning values to and from subroutines
+
+\noindent\begin{minipage}{.45\textwidth}
+    \begin{lstlisting}[frame=single, title=Factorial]
+.data
+IN: .word 10
+
+.text
+.global _start
+_start:
+    LDR R1, =IN
+    LDR R1, [R1]
+    BL FACT
+    B END
+FACT:
+    CMP R1, #2 // R1 - 2 => CPSR
+    BLT RETURN1
+    B ELSE
+RETURN1:
+    MOV R0, #1
+    BX LR
+ELSE:
+    PUSH {R1, LR} // store current N and LR
+    SUB R1, R1, #1 // --N
+    BL FACT
+    POP {LR, R1}
+    MUL R0, R0, R1
+    BX LR
+END:
+    B END
+    \end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}{.45\textwidth}
+    \begin{lstlisting}[frame=single, title=Fibonacci]
+.data
+IN: .word 25
+
+.text
+.global _start
+_start:
+    LDR R1, =IN
+    LDR R1, [R1]
+    BL FIB
+    B END
+FIB:
+    CMP R1, #3 // R1 - 3 => CPSR
+    BLT RETURN1
+    B ELSE
+RETURN1:
+    MOV R0, #1
+    BX LR
+ELSE:
+    PUSH {R1, LR} // Store LR and the current N
+    SUB R1, R1, #1
+    BL FIB
+    PUSH {R0}
+    SUB R1, R1, #1
+    BL FIB
+    POP {R1}
+    ADD R0, R0, R1
+    POP {LR, R1}
+    BX LR
+END:
+    B END
+    \end{lstlisting}
+\end{minipage}
+
+\subsection{Factorial}
+The factorial of a positive integer $n$ denoted by \textbf{\textit{n!}}, is defined by the product of all positive integers smaller or equal to $n$. For example, $10! = 10 \cdot 9 \cdot 8 \cdot 7 \cdot 6 \cdot 5 \cdot 4 \cdot 3 \cdot 2 \cdot 1 = 3628800 = 0\times375F00$.\\
+The program takes an integer (line 2) $n$ as input. This input is then loaded from memory into the register R1. To follow the ARM Procedure Call Standard (APCS), registers R1 and R0 are chosen for passing the parameter $n$, and returning $n!$ to and from the subroutine respectively. \\
+Once the input to the subroutine is loaded, the factorial subroutine is called using BL. This instruction branches to the subroutine and stores the address of the next instruction into LR, the link register.\\
+The factorial $n!$ is equal to 1 when $n$ is either 1 or 0. For this reason, the factorial subroutine compares the value of n to two. If n is less than two, the subroutine branches to return the number one by storing the value one into R0, the register used for returning values from the factorial procedure. The subroutine then returns to the callee using BX which branches to the address stored previously in the link register LR.\\
+If $n$ is greater or equal to two, the recursive part of the subroutine is executed. Before the recursive call to the subroutine, the new input has to be updated by decrementing R1 by one. However, to remember the current value of n, which we use later, R1 is pushed onto the stack. Similarly, to store the address in the link register, which will be overwritten after the subroutine is called recursively using BL, LR is also pushed onto the stack. Once the recursive step is executed, the value n previously pushed onto the stack and the return address to the callee are poped.  The return value is then stored into R0 by multiplying n (R1) by the return value of the recursive call (R0). Finally, the subroutine returns to the callee by branching to the address stored in the link register using BX.
+The program then ends by calling an infinite loop. \\
+The procedure was tested by values ranging from zero to ten to assure the obtention of correct results. The main challenge faced in implementing this procedure was the correct usage of the stack, understanding the use of BL and BX instructions, and the call stack.
+
+\subsection{Fibonacci}
+
+\section{2D Convolution}
+\section{Bubble Sort}
+\blindtext
+\begin{lstlisting}[frame=single, linewidth=8cm, title=Bubble Sort]
+.data
+ARRAY: .word -1, 23, 0, 12, -7
+SIZE: .word 5
+
+.text
+.global _start
+_start:
+    LDR R0, =SIZE
+    LDR R0, [R0] // SIZE => R0
+    LDR R1, =ARRAY // &ARRAY[0] => R1
+    MOV R2, #0 // step => R2
+LOOP1:
+    MOV R3, #0 // i => R3
+    CMP R0, R2
+    BLE END
+    ADD R2, R2, #1
+LOOP2:
+    SUB R4, R0, R2
+    CMP R4, R3
+    BLE LOOP1
+    ADD R7, R3, #1
+    LDR R4, [R1, R3, LSL#2] // *(ptr + i)
+    LDR R5, [R1, R7, LSL#2] // *(ptr + i + 1)
+    // Swap if necessary
+    CMP R4, R5
+    STRGT   R5,[R1,R3,LSL #2]
+    STRGT   R4,[R1,R7,LSL #2]
+    ADD R3, R3, #1
+    B LOOP2
+END:
+    B END
+\end{lstlisting}
+\blindtext
+\end{document}
