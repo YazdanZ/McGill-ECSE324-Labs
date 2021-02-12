@@ -154,7 +154,10 @@ ENDLOOP1:
 	B LOOP1
 
 END:
-	B END
+	POP {R6, R7, R8}
+
+INFLOOP:
+	B INFLOOP
 
 /* Output: Array = {
            {656 ,160 ,113 ,72 ,-51 ,-430 ,23 ,333 ,-70 ,-191 },
