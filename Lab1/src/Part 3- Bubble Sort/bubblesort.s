@@ -30,7 +30,7 @@ LOOP2:
 	// Swap if necessary 
 	CMP R4, R5
 	STRGT   R5,[R1,R3,LSL #2]   
-    STRGT   R4,[R1,R7,LSL #2]  
+    	STRGT   R4,[R1,R7,LSL #2]  
 	
 	ADD R3, R3, #1
 	B LOOP2
