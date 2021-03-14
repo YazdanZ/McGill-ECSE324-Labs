@@ -8,22 +8,57 @@
 
 DISPLAY_CODES: .byte 63, 6, 91, 79, 102, 109, 125, 7, 127, 103, 119, 127, 57, 63, 121, 113
 
+.equ PUSH_BUTTON_DATA, 0xFF200050 
+
 .text
 .global _start
 
 _start:
-	MOV R0, #0xFF
-	MOV R1, #16
-	BL HEX_write_ASM
-	B END
+	B IOAPPLICATION
 	
 	
 // Turn on LEDs corresponding to switches
 // eg. 00000100 switches the 3rd LED on (index 2)
 switch_to_LED:
+	PUSH {LR}
 	BL read_slider_switches_ASM
 	BL write_LEDs_ASM
-	B switch_to_LED
+	POP {LR}
+	BX LR
+
+/*
+* the state of the slider switches are
+* mapped directly to the LEDs. Additionally, 
+* the state of the last four slider switches
+* SW3-SW0 are used to set the value of
+* a number from 0-15. This number is displayed
+* on a HEX display when the corresponding pushbutton
+* is pressed. Slider switch SW9 clears all the HEX
+* displays.
+*/
+IOAPPLICATION:
+	// turns on LEDs based on switches
+	BL switch_to_LED
+	
+	//create a constant-pool and load the value
+	LDR R1, =#0x20F 
+	AND R1, R0, R1 // isolate the 4 MSBs and SW9
+		
+	// turn on HEX4-HEX7
+	MOV R0, #0xF0 // one-hot encoding for HEX4-HEX7
+	BL HEX_flood_ASM // lightup HEX4-HEX7
+		
+	// turn HEX displays based on PBs and SWs
+	BL read_PB_data_ASM
+	BL HEX_write_ASM
+	
+	// clear HEX0-HEX3 if SW9 is on
+	TST R1, #0x200 // check SW9
+	MOVNE R0, #0xF // clear HEX0-HEX3
+	BLNE HEX_clear_ASM
+	
+	B IOAPPLICATION 
+	
 
 /*
  * slider switches driver
@@ -90,7 +125,7 @@ HEX_flood_ASM:
 * 
 * the subroutine receives the HEX
 * display indices and an integer value
-* between 0-15 through R1 and R2 registers. 
+* between 0-15 through R0 and R1 registers. 
 * based on the second argument (R1) value, 
 * the subroutine will display the 
 * corresponding HEXadecimal digit
@@ -146,6 +181,115 @@ WRITE_TO_DISP:
 	STRB R2, [R5, R6]
 	
 	POP {R5, R6}
+	BX LR
+
+//--------------------------------------------------
+
+/*
+* PushButton driver
+* 
+* returns the indices of the pressed 
+* pushbuttons. Indices are encoded based 
+* on a one-hot encoding scheme
+*/
+read_PB_data_ASM:
+	LDR R0, =PUSH_BUTTON_DATA
+	LDR R0, [R0] // read the value of the data register
+	BX LR
+
+
+/*
+* PushButton driver
+*
+* receives pushbuttons indices and returns
+* 0x00000001 when the corresponding push-
+* button is pressed, 0 otherwise
+*
+*/
+PB_data_is_pressed_ASM:
+	PUSH {LR}
+	BL read_PB_data_ASM // read pushbutton data
+	AND R0, R0, R1 // AND the input and the PBdata
+	CMP R0, R1
+	MOVEQ R0, #1
+	MOVNE R0, #0
+	POP {LR}
+	BX LR
+
+
+/*
+* PushButton driver
+* 
+* returns the indices of the PBs that
+* have been pressed and then released
+* (from the edgecapture register edgebit)
+*/
+read_PB_edgecp_ASM:
+	LDR R0, =PUSH_BUTTON_DATA
+	LDR R0, [R0, #12]
+	BX LR
+
+/*
+* PushButton driver
+*
+* receives the pushbutton indices
+* returns 0x00000001 when the corr-
+* esponding pushbutton has been asserted
+*/
+PB_edgecp_is_pressed_ASM:
+	PUSH {LR}
+	BL read_PB_edgecp_ASM
+	AND R0, R0, R1
+	CMP R0, R1
+	MOVEQ R0, #1
+	MOVNE R0, #0
+	POP {LR}
+	BX LR
+
+/*
+* PushButton driver
+*
+* clear the PB edgecapture register
+*/
+PB_clear_edgecp_ASM:
+	PUSH {R1, LR}
+	BL read_PB_edgecp_ASM
+	LDR R1, =PUSH_BUTTON_DATA
+	STR R0, [R1, #12]
+	POP {R1, LR}
+	BX LR
+
+/*
+* PushButton driver
+*
+* receives PB indices as an arg
+* and enables the interrupt fun-
+* ction for the corresponding PBs
+*/
+enable_PB_INT_ASM: 
+	PUSH {R2}
+	LDR R2, =PUSH_BUTTON_DATA
+	ADD R2, R2, #8 // interruptmask register
+	LDR R0, [R2]
+	ORR R0, R0, R1 // perform OR operation on the IMR
+	STR R0, [R2]
+	POP {R2}
+	BX LR
+/*
+* PushButton driver
+*
+* receives PB indices as an arg
+* and disables the interrupt fun-
+* ction for the corresponding PBs
+*/
+disable_PB_INT_ASM:
+	PUSH {R2}
+	LDR R2, =PUSH_BUTTON_DATA
+	ADD R2, R2, #8 // interruptmask register
+	LDR R0, [R2]
+	BIC R0, R0, R1 //perform bitclear operation on the IMR
+	STR R0, [R2]
+	POP {R2}
 	BX LR
 
 END:
