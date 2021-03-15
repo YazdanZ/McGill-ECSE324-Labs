@@ -10,13 +10,50 @@ DISPLAY_CODES: .byte 63, 6, 91, 79, 102, 109, 125, 7, 127, 103, 119, 127, 57, 63
 
 .equ PUSH_BUTTON_DATA, 0xFF200050 
 
+.equ A9_TIMER_LOAD, 0xFFFEC600
+
 .text
 .global _start
 
 _start:
-	B IOAPPLICATION
+	B INITTIMER
+
+/*
+* Timer application that counts
+* from 0 to 15 by increments of
+* 1 seconds and resets back to 0
+* when 15 (F) is reached 
+* 
+*/
+INITTIMER:
+	// (clk freq = 200Mhz)
+	LDR R0, =#200000000 // initial count value
+	MOV R1, #3 // A=1, E=1, I=0
+	LDR R2, =#0 // no prescaler
+	BL ARM_TIM_config_ASM
+	MOV R1, #0 // count value
+
+TIMER:	
+	// write to HEX0 display 
+	MOV R0, #1
+	BL HEX_write_ASM
+	BL ARM_TIM_read_INT_ASM	
+	CMP R0, #1
+	BEQ INCREMENT
+	B TIMER
+
+INCREMENT:
+	// increment counter
+	ADD R1, R1, #1
 	
+	// reset counter if =16
+	CMP R1, #16
+	MOVEQ R1, #0
 	
+	// clear interrupt bit "F"
+	BL ARM_TIM_clear_INT_ASM
+	B TIMER
+
 // Turn on LEDs corresponding to switches
 // eg. 00000100 switches the 3rd LED on (index 2)
 switch_to_LED:
@@ -292,5 +329,62 @@ disable_PB_INT_ASM:
 	POP {R2}
 	BX LR
 
+
+/*
+* ARM A9 Private Timer driver
+*
+* configure the A9 timer
+*/
+ARM_TIM_config_ASM:
+	PUSH {R3, LR}
+	LDR R3, =A9_TIMER_LOAD
+	STR R0, [R3] // set the initial count value
+	
+	// write to the control register
+	ADD R3, R3, #8
+	STRB R2, [R3, #1]
+	STRB R1, [R3]
+	
+	POP {R3, LR}
+	BX LR
+
+/*
+* ARM A9 Private Timer driver
+*
+* returns the "F" value from the ARM
+* A9 private time interrupt status 
+* register
+*/
+ARM_TIM_read_INT_ASM:
+	LDR R0, =A9_TIMER_LOAD
+	LDRB R0, [R0, #12]
+	BX LR
+
+/*
+* ARM A9 Private Timer driver
+*
+* clears the "F" value from the ARM
+* A9 private time interrupt status 
+* register
+*/
+ARM_TIM_clear_INT_ASM:
+	PUSH {R0, R1, LR}
+	BL ARM_TIM_read_INT_ASM
+	LDR R1, =A9_TIMER_LOAD
+	STRB R0, [R1, #12]
+	POP {R0, R1, LR}
+	BX LR
+
+/*
+* ARM A9 Private Timer driver
+*
+* read the current count value
+*/
+ARM_TIM_read_count_ASM:
+	LDR R0, =A9_TIMER_LOAD
+	LDR R0, [R0, #4] // read the counter register
+	BX LR
+
+	
 END:
 	B END
