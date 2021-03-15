@@ -27,6 +27,7 @@ HEX_clear_ASM:
 	POP {R2, LR}
 	BX LR
 
+
 /*
 * HEX display driver
 * 
@@ -42,6 +43,24 @@ HEX_flood_ASM:
 	
 	POP {R2, LR}
 	BX LR
+
+
+/*
+* HEX display driver
+* 
+* the subroutine turns on all the
+* the HEX displays passed in
+* the argument (R0) to 0
+*/
+HEX_zero_ASM:
+	PUSH {R2, LR}
+	
+	MOV R2, #63 // = 0
+	BL FIND_DISP
+	
+	POP {R2, LR}
+	BX LR
+
 
 /*
 * HEX display driver

@@ -16,16 +16,152 @@ DISPLAY_CODES: .byte 63, 6, 91, 79, 102, 109, 125, 7, 127, 103, 119, 127, 57, 63
 .global _start
 
 _start:
-	B INITTIMER
+	B POLLING_STOPWATCH
 
 /*
-* Timer application that counts
-* from 0 to 15 by increments of
+* POLLING BASED STOPWATCH
+*
+* Use PB0, PB1, and PB2 are used to 
+* start, stop and reset the stopwatch, 
+* respectively. The stopwatch counts in
+* increments of 10ms. HEX4-5, HEX2-3, HEX0-1
+* correspond to minutes, seconds, and 
+* milliseconds respectively
+*/
+POLLING_STOPWATCH:
+
+RESET_STOPWATCH:
+	// set all the displays to 0
+	MOV R0, #0xFF // all 8 displays
+	BL HEX_zero_ASM
+		
+	// milliseconds: HEX0 (R3), HEX1 (R4)
+	MOV R3, #0
+	MOV R4, #0
+	
+	// seconds: HEX2 (R5), HEX3 (R6)
+	MOV R5, #0
+	MOV R6, #0
+	
+	// minutes: HEX4 (R7), HEX5 (R8)
+	MOV R7, #0
+	MOV R8, #0
+	
+	B POLL_STOPWATCH
+
+START_STOPWATCH:
+	// we count in increments of 10ms
+	LDR R0, =#2000000
+	MOV R1, #3 // A=1, E=1 (start), I=0
+	LDR R2, =#0 // no prescaler
+	BL ARM_TIM_config_ASM
+	B POLL_STOPWATCH
+
+STOP_STOPWATCH:
+	// we count in increments of 10ms
+	LDR R0, =#2000000
+	MOV R1, #0 // A=0, E=0 (start), I=0
+	LDR R2, =#0 // no prescaler
+	BL ARM_TIM_config_ASM
+	
+POLL_STOPWATCH:
+	// Start = PB0
+	MOV R1, #1
+	BL PB_edgecp_is_pressed_ASM
+	CMP R0, #1
+	BLEQ PB_clear_edgecp_ASM
+	BEQ START_STOPWATCH
+	
+	
+	// Stop = PB1
+	MOV R1, #2
+	BL PB_edgecp_is_pressed_ASM
+	CMP R0, #1
+	BLEQ PB_clear_edgecp_ASM
+	BEQ STOP_STOPWATCH
+	
+	
+	// Reset = PB2
+	MOV R1, #4
+	BL PB_edgecp_is_pressed_ASM
+	CMP R0, #1
+	BLEQ PB_clear_edgecp_ASM
+	BEQ RESET_STOPWATCH
+
+	BL ARM_TIM_read_INT_ASM	
+	CMP R0, #1 // check the "F" bit
+	BEQ INC_STOPWATCH
+	B POLL_STOPWATCH
+	
+INC_STOPWATCH:
+	// clear interrupt bit "F"
+	BL ARM_TIM_clear_INT_ASM
+	
+	ADD R3, R3, #1
+	CMP R3, #10
+	MOVEQ R3, #0
+	ADDEQ R4, R4, #1
+	
+	CMP R4, #10
+	MOVEQ R4, #0
+	ADDEQ R5, R5, #1
+	
+	CMP R5, #10
+	MOVEQ R5, #0
+	ADDEQ R6, R6, #1
+	
+	CMP R6, #6 //1h = 60mins
+	MOVEQ R6, #0
+	ADDEQ R7, R7, #1
+	
+	CMP R7, #10
+	MOVEQ R7, #0
+	ADDEQ R8, R8, #1
+	
+	CMP R8, #6
+	
+	// if we reached 60 mins
+	BEQ RESET_STOPWATCH
+	
+DISPLAY_STOPWATCH:
+	
+	MOV R0, #1
+	MOV R1, R3
+	BL HEX_write_ASM
+	
+	MOV R0, #2
+	MOV R1, R4
+	BL HEX_write_ASM
+	
+	MOV R0, #4
+	MOV R1, R5
+	BL HEX_write_ASM
+
+	MOV R0, #8
+	MOV R1, R6
+	BL HEX_write_ASM
+	
+	MOV R0, #16
+	MOV R1, R7
+	BL HEX_write_ASM
+
+	MOV R0, #32
+	MOV R1, R8
+	BL HEX_write_ASM
+	
+	B POLL_STOPWATCH
+	
+
+/*
+* SIMPLE COUNTER
+*
+* Counter application that counts
+* from 0 to 15 (F) by increments of
 * 1 seconds and resets back to 0
 * when 15 (F) is reached 
 * 
 */
-INITTIMER:
+SIMPLECOUNTER:
 	// (clk freq = 200Mhz)
 	LDR R0, =#200000000 // initial count value
 	MOV R1, #3 // A=1, E=1, I=0
@@ -33,16 +169,16 @@ INITTIMER:
 	BL ARM_TIM_config_ASM
 	MOV R1, #0 // count value
 
-TIMER:	
+POLL_SIMPLECOUNTER:	
 	// write to HEX0 display 
 	MOV R0, #1
 	BL HEX_write_ASM
 	BL ARM_TIM_read_INT_ASM	
 	CMP R0, #1
-	BEQ INCREMENT
-	B TIMER
+	BEQ INC_SIMPLECOUNTER
+	B POLL_SIMPLECOUNTER
 
-INCREMENT:
+INC_SIMPLECOUNTER:
 	// increment counter
 	ADD R1, R1, #1
 	
@@ -52,7 +188,7 @@ INCREMENT:
 	
 	// clear interrupt bit "F"
 	BL ARM_TIM_clear_INT_ASM
-	B TIMER
+	B POLL_SIMPLECOUNTER
 
 // Turn on LEDs corresponding to switches
 // eg. 00000100 switches the 3rd LED on (index 2)
@@ -175,6 +311,22 @@ HEX_write_ASM:
 	BL FIND_DISP
 	
 	POP {R2, R3, LR}
+	BX LR
+
+/*
+* HEX display driver
+* 
+* the subroutine turns on all the
+* the HEX displays passed in
+* the argument (R0) to 0
+*/
+HEX_zero_ASM:
+	PUSH {R2, LR}
+	
+	MOV R2, #63 // = 0
+	BL FIND_DISP
+	
+	POP {R2, LR}
 	BX LR
 
 
