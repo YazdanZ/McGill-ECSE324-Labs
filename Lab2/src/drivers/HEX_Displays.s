@@ -9,6 +9,7 @@ DISPLAY_CODES: .byte 63, 6, 91, 79, 102, 109, 125, 7, 127, 103, 119, 127, 57, 63
 .global HEX_clear_ASM
 .global HEX_flood_ASM
 .global HEX_write_ASM
+.global HEX_zero_ASM
 
 
 /*

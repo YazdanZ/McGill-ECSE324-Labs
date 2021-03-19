@@ -1,31 +1,17 @@
 .data
 
-PB_int_flag:
-	.word 0x0
-
-TIM_int_flag:
-	.word 0x0
-
-
-.equ SW_MEMORY, 0xFF200040
-
-.equ LED_MEMORY, 0xFF200000
-
 .equ HEX_0_TO_3, 0xFF200020
 .equ HEX_4_TO_5, 0xFF200030
-
 DISPLAY_CODES: .byte 63, 6, 91, 79, 102, 109, 125, 7, 127, 103, 119, 127, 57, 63, 121, 113
 
 .equ PUSH_BUTTON_DATA, 0xFF200050 
-
 .equ A9_TIMER_LOAD, 0xFFFEC600
 
-/*The program responds to interrupts from the 
-* pushbutton KEY port in the FPGA. The interrupt
-* service routine for the pushbutton KEYs indicates
-* which KEY has been pressed on the HEX0 display. 
-*/
-
+PB_int_flag:
+	.word 0x0
+TIM_int_flag:
+	.word 0x0
+	
 .section .vectors, "ax"
 B _start
 B SERVICE_UND  // undefined instruction vector
@@ -66,7 +52,6 @@ _start:
 	MSR CPSR_c, R0
 
 IDLE:
-
 RESET_STOPWATCH:
 	// set all the displays to 0
 	MOV R0, #0xFF // all 8 displays
@@ -232,12 +217,6 @@ SERVICE_FIQ:
 CONFIG_GIC:
 	PUSH {LR}
 
-/* To configure the FPGA KEYS interrupt (ID 73):
-* 1. set the target to cpu0 in the ICDIPTRn register
-* 2. enable the interrupt in the ICDISERn register */
-/* CONFIG_INTERRUPT (int_ID (R0), CPU_target (R1)); */
-/* To Do: you can configure different interrupts
-by passing their IDs to R0 and repeating the next 3 lines */
 	MOV R0, #73 // KEY port (Interrupt ID = 73)
 	MOV R1, #1 // this field is a bit-mask; bit 0 target cpu0
 	BL CONFIG_INTERRUPT

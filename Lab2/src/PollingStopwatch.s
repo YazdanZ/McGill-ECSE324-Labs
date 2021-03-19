@@ -1,7 +1,4 @@
 .data
-.equ SW_MEMORY, 0xFF200040
-
-.equ LED_MEMORY, 0xFF200000
 
 .equ HEX_0_TO_3, 0xFF200020
 .equ HEX_4_TO_5, 0xFF200030
@@ -16,6 +13,7 @@ DISPLAY_CODES: .byte 63, 6, 91, 79, 102, 109, 125, 7, 127, 103, 119, 127, 57, 63
 .global _start
 
 _start:
+	//B SIMPLECOUNTER
 	B POLLING_STOPWATCH
 
 /*
@@ -189,77 +187,6 @@ INC_SIMPLECOUNTER:
 	// clear interrupt bit "F"
 	BL ARM_TIM_clear_INT_ASM
 	B POLL_SIMPLECOUNTER
-
-// Turn on LEDs corresponding to switches
-// eg. 00000100 switches the 3rd LED on (index 2)
-switch_to_LED:
-	PUSH {LR}
-	BL read_slider_switches_ASM
-	BL write_LEDs_ASM
-	POP {LR}
-	BX LR
-
-/*
-* the state of the slider switches are
-* mapped directly to the LEDs. Additionally, 
-* the state of the last four slider switches
-* SW3-SW0 are used to set the value of
-* a number from 0-15. This number is displayed
-* on a HEX display when the corresponding pushbutton
-* is pressed. Slider switch SW9 clears all the HEX
-* displays.
-*/
-IOAPPLICATION:
-	// turns on LEDs based on switches
-	BL switch_to_LED
-	
-	//create a constant-pool and load the value
-	LDR R1, =#0x20F 
-	AND R1, R0, R1 // isolate the 4 MSBs and SW9
-		
-	// turn on HEX4-HEX7
-	MOV R0, #0xF0 // one-hot encoding for HEX4-HEX7
-	BL HEX_flood_ASM // lightup HEX4-HEX7
-		
-	// turn HEX displays based on PBs and SWs
-	BL read_PB_data_ASM
-	BL HEX_write_ASM
-	
-	// clear HEX0-HEX3 if SW9 is on
-	TST R1, #0x200 // check SW9
-	MOVNE R0, #0xF // clear HEX0-HEX3
-	BLNE HEX_clear_ASM
-	
-	B IOAPPLICATION 
-	
-
-/*
- * slider switches driver
- *
- * stores the values of the slider
- * switches in R0
- */
-read_slider_switches_ASM:
-	PUSH {R1} // calee-save convention
-	LDR R1, =SW_MEMORY
-	LDR R0, [R1]
-	POP {R1}
-	BX LR
-
-/* LED driver
- * 
- * Write the value in R0 to
- * the memory location of the
- * LEDs to set the state (on/off)
- * of the LEDs
- *
- */
-write_LEDs_ASM:
-	PUSH {R1} // calee-save convention
-	LDR R1, =LED_MEMORY
-	STR R0, [R1]
-	POP {R1}
-	BX LR
 
 /*
 * HEX display driver
@@ -536,7 +463,3 @@ ARM_TIM_read_count_ASM:
 	LDR R0, =A9_TIMER_LOAD
 	LDR R0, [R0, #4] // read the counter register
 	BX LR
-
-	
-END:
-	B END
