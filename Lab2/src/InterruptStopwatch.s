@@ -131,7 +131,7 @@ INC_STOPWATCH:
 	MOVEQ R5, #0
 	ADDEQ R6, R6, #1
 	
-	CMP R6, #6 //1h = 60mins
+	CMP R6, #6 //1min = 60s
 	MOVEQ R6, #0
 	ADDEQ R7, R7, #1
 	
