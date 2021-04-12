@@ -1,6 +1,7 @@
-\documentclass[10pt]{article}
+\documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{blindtext}
+\usepackage{xfrac}
 \usepackage{graphicx}
 \usepackage{subfig}
 \usepackage{verbatim}
@@ -44,13 +45,11 @@ Once the two first arguments are validated, we calculate the memory address spec
 To clear all memory location in the character buffer in \verb+VGA_clear_charbuff_ASM+, we follow the same approach as the one described for clearing the pixel buffer. Using a nested loop we loop through all valid x ($0\leq x < 80$) and y ($0 \leq y < 60$) coordinate of the character buffer and reuse the \verb+VGA_write_char_ASM+ subroutine to store 0 in every valid location specified by x and y. The subroutine returns when both x and y hit their upper bounds. x and y loop counters both start at 0.
 
 \subsection{Test VGA Driver}
-To test implemented subroutines for the VGA display, we use the provided code that clears both pixel and character buffers using \verb+VGA_clear_pixelbuff_ASM+ and \verb+VGA_clear_charbuff_ASM+ respectively and colours the VGA display using a colour gradient and prints a "Hello World!" text by calling \verb+VGA_draw_point_ASM+ and \verb+VGA_write_char_ASM+. The results on this test shown in Figure 1 (a) are as expected.
+To test implemented subroutines for the VGA display, we use the provided code that clears both pixel and character buffers using \verb+VGA_clear_pixelbuff_ASM+ and \verb+VGA_clear_charbuff_ASM+ respectively and colours the VGA display using a colour gradient and prints a "Hello World!" text by calling \verb+VGA_draw_point_ASM+ and \verb+VGA_write_char_ASM+. The result of this test shown in Figure 1 is as expected.
 \begin{figure}[h]
     \centering
-    \subfloat[\centering VGA driver test output]{{\includegraphics[width=5.5cm]{5} }}%
-    \qquad
-    \subfloat[\centering PS/2 driver test output]{{\includegraphics[width=8.6cm]{4} }}%
-    \caption{}%
+    \includegraphics[width=6.8cm]{5}
+    \caption{VGA driver test output}
 \end{figure}
 \section{Reading Keyboard Input}
 \subsection{PS/2 Driver}
@@ -59,19 +58,32 @@ To detect and read keystroke events through the PS/2 keyboard protocol, we creat
 This subroutine named \verb+read_PS2_data_ASM+ isolates the \verb+RVALID+ bit by performing an \verb+ANDS+ operation between the content of the PS/2 data register and 0x8000 (number only containing 1 as the 15th bit). If the \verb+RVALID+ bit is equal to 0, we store 0 in the return register \verb+R0+ and branch back to the caller. Otherwise, we read the first 8 bits of the PS/2 data register using a byte load operation (\verb+LDRB+) and store the loaded data into the address passed in the first argument R0 using \verb+STRB+. Finally, 1 is stored into \verb+R0+ before branching to the caller.
 
 \subsection{Testing the PS/2 Driver}
-To test the implemented PS/2 driver, we use the provided program that displays the make and break codes corresponding using the PS/2 keyboard device. We run the program and input the characters "a", "b", and "c" in sequence. The VGA display after performing this test is presented in Figure 1 (b). As shown in Figure 1 (b), 9 codes were printed on the VGA display. We can verify that the first, second, and third triplet corresponds to characters "a", "b", and "c" respectively. The first code in each triplet corresponds to the make code while the seconds and third codes together correspond to the break code. For instance, the first displayed triplet (\verb+1C F0 1C+) corresponds to character "a" with \verb+1C+ being the make code and \verb+F0 1C+ being the break code.
+To test the implemented PS/2 driver, we use the provided program that displays the make and break codes corresponding using the PS/2 keyboard device. We run the program and input the characters "a", "b", and "c" in sequence. The VGA display after performing this test is presented in Figure 2. As shown in Figure 2, 9 codes were printed on the VGA display. We can verify that the first, second, and third triplet corresponds to characters "a", "b", and "c" respectively. The first code in each triplet corresponds to the make code while the seconds and third codes together correspond to the break code. For instance, the first displayed triplet (\verb+1C F0 1C+) corresponds to character "a" with \verb+1C+ being the make code and \verb+F0 1C+ being the break code.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=8.6cm]{4}
+    \caption{PS/2 driver test output}
+\end{figure}
 \section{Putting Everything Together: Vexillology}
+In this last part, we use all implemented subroutines and a provided starter code to complete a program that uses keys "A" and "D" received through the PS/2 keyboard interface to cycle through flags on the VGA display. We are provided with two subroutines, \verb+draw_rectangle+ and \verb+draw_star+ to implement two subroutines named \verb+draw_real_life_flag+ and \verb+draw_imaginary_flag_+ that draw real-life and imaginary flags as the names suggest.\\
+
+For the real-life flag, we implement \verb+draw_real_life_flag+ to draw the flag of Burkina Faso. This flag is composed of two horizontal red and green bands with a yellow five-pointed star. The two horizontal bands are drawn using the \verb+draw_rectangle+ subroutine. The first call to \verb+draw_rectangle+, draws the red band on the top half of the screen. The subroutine is called by passing 0 and 0 for the starting coordinates x and y, 320 for the width and 120 ($\sfrac{240}{2}$) for the height of the rectangle. The mentioned arguments are passed in \verb+R0+ to \verb+R3+ respectively. The colour red is pushed on to the stack and popped off the stack once the procedure call is finished. The second call to \verb+draw_rectangle+ draws the green band occupying the bottom half of the flag. We pass the same width, height, and x argument as the first call but update the y argument to 120 and the last argument pushed to the stack to the colour green. Finally, the yellow star is drawn by calling the \verb+draw_star+ subroutine, by passing the coordinates of the centre of the screen ($x = \sfrac{340}{2} = 160$, $y = \sfrac{240}{2} = 120$), a radius to 35 and the colour yellow. The resulting flag is displayed in Figure 3 (a).
+
+We use the same two helper subroutines with the described argument to implement the \verb+draw_ima+ \verb+ginary_flag+ subroutine to display a slightly more complex flag on the VGA display illustrated in Figure 3 (b).
+
+We test all subroutines we implemented in this lab using the provided program. Cycling through the flags using the PS/2 keyboard, flags in Figure 3 are displayed. We can therefore deduce the correctness of all our implementations.
 
 \begin{figure}[h]
     \centering
-    \subfloat[\centering Real-life flag (flag of Burkina Faso)]{{\includegraphics[width=4.9cm]{1} }}%
+    \subfloat[\centering Real-life flag (flag of Burkina Faso)]{{\includegraphics[width=4.8cm]{1} }}%
     \qquad
     \subfloat[\centering Imaginary flag]{{\includegraphics[width=4.9cm]{2} }}%
     \qquad
-    \subfloat[\centering flag of Texas]{{\includegraphics[width=4.9cm]{3} }}%
+    \subfloat[\centering flag of Texas]{{\includegraphics[width=4.8cm]{3} }}%
     \caption{}%
 \end{figure}
 \section{Conclusion}
+To conclude, in this lab, we implemented drivers for the VGA display and PS/2 keyboard port of the DE1-SoC. We exercised our knowledge of ARM assembly and input/output and used multiple sources of documentation. We explored ways of testing our subroutines as we implement them and practiced concepts such as code reusability and defensive programming. We finally integrated all the software components written into a more complex application requiring perfectly functioning components.
 
 
 \end{document}
