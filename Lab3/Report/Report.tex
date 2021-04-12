@@ -53,6 +53,13 @@ To test implemented subroutines for the VGA display, we use the provided code th
     \caption{}%
 \end{figure}
 \section{Reading Keyboard Input}
+\subsection{PS/2 Driver}
+To detect and read keystroke events through the PS/2 keyboard protocol, we create a PS/2 driver that inputs a memory address to store the data read from the PS/2 keyboard port if new data is available in the FIFO that stores data received from the PS/2 device.  We detect the availability of unread data by checking the $15^{th}$ (\verb+RVALID+) bit in the PS/2 data register. The subroutine returns the value of the \verb+RVALID+ bit.
+
+This subroutine named \verb+read_PS2_data_ASM+ isolates the \verb+RVALID+ bit by performing an \verb+ANDS+ operation between the content of the PS/2 data register and 0x8000 (number only containing 1 as the 15th bit). If the \verb+RVALID+ bit is equal to 0, we store 0 in the return register \verb+R0+ and branch back to the caller. Otherwise, we read the first 8 bits of the PS/2 data register using a byte load operation (\verb+LDRB+) and store the loaded data into the address passed in the first argument R0 using \verb+STRB+. Finally, 1 is stored into \verb+R0+ before branching to the caller.
+
+\subsection{Testing the PS/2 Driver}
+To test the implemented PS/2 driver, we use the provided program that displays the make and break codes corresponding using the PS/2 keyboard device. We run the program and input the characters "a", "b", and "c" in sequence. The VGA display after performing this test is presented in Figure 1 (b). As shown in Figure 1 (b), 9 codes were printed on the VGA display. We can verify that the first, second, and third triplet corresponds to characters "a", "b", and "c" respectively. The first code in each triplet corresponds to the make code while the seconds and third codes together correspond to the break code. For instance, the first displayed triplet (\verb+1C F0 1C+) corresponds to character "a" with \verb+1C+ being the make code and \verb+F0 1C+ being the break code.
 \section{Putting Everything Together: Vexillology}
 
 \begin{figure}[h]
