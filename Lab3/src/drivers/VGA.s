@@ -100,7 +100,7 @@ END_VGA_clear_pixelbuff_ASM:
 VGA_write_char_ASM:
 	PUSH {R3}
 
-// char buffer is 320 × 240 
+// char buffer is 80 × 60 
 // so 0 <= x < 80 and 0 <= y < 60 
 VALIDATE_BOUNDS_char:
 	CMP R0, #0
